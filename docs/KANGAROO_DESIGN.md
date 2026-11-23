@@ -3,9 +3,22 @@
 > Documento de design / estudo. Objetivo: entender o algoritmo Kangaroo (via
 > RCKangaroo), a matemática EC envolvida, e responder com rigor se o método
 > "volante" (`--first-allow` + `--allow`) pode ser combinado com Kangaroo dentro
-> do EXCALIBUR. **Passo de entendimento — ainda não é implementação.**
+> do EXCALIBUR. Era um passo de entendimento anterior à implementação.
 
 Autor: cetusquantico · Data: 2026-11-22 · Status: rascunho de arquitetura
+
+> **Atualização (2026-11-23) — já implementado.** O Kangaroo deixou de ser proposta e
+> virou o projeto **EXCALIBUR-KANGAROO369** (repositório próprio, público, licença MIT,
+> CI verde). O que este documento previa está construído — dispatcher, intervalo exato do
+> puzzle, pontos distinguidos, checkpoint/resume, ranges de 2 a 160 bits — e validado em
+> dado real: **puzzle 68 resolvido a partir da chave pública em ~50 min** no i5-3470.
+>
+> Correção importante à seção 1.4: a simetria `±P` **não** entrega `K≈1,15` de graça.
+> Escolher o sinal do salto pela paridade de `y` torna o passeio um **random walk 1-D
+> recorrente**, que acima de ~52 bits trava em laços que re-batem os mesmos DPs. O conserto
+> (a "Fase 6" do outro repo) foi reimplementar a simetria como **caminhadas Gaudry–Schost**
+> (recomeço num ponto aleatório após cada DP). K medido ≈2 — hoje empata com o Kangaroo
+> plano; chegar perto do 1,36 teórico é ajuste fino futuro.
 
 ---
 
@@ -69,6 +82,10 @@ de calcular, o espaço efetivo cai pela metade. Resultado: **`K = 1,15`**, contr
 `K = 2,1` do método clássico (≈1,8× menos operações); e melhor que os "3-way
 kangaroo" de `K≈1,6`. Manadas: ~1/3 tame, ~2/3 wild.
 `ops ≈ K·2^(range/2)`.
+
+> ⚠️ Esse `K=1,15` é o **alvo teórico ideal**, não o que sai de graça. Ver a nota de
+> atualização no topo: a implementação real (EXCALIBUR-KANGAROO369, Fase 6) mede **K≈2**
+> com caminhadas Gaudry–Schost; a versão ingênua da simetria travava acima de ~52 bits.
 
 ### 1.5 Como os bits altos conhecidos entram
 No RCKangaroo você passa `-range B` (largura em bits) e `-start OFFSET` (hex).
@@ -193,6 +210,9 @@ baixo) o Kangaroo **já suporta** como "bits conhecidos". E, para chave aleatór
 
 ## 6. Arquitetura proposta no EXCALIBUR
 
+> ✅ **Construída** em EXCALIBUR-KANGAROO369 (ver nota no topo). O que segue é a proposta
+> original; a implementação seguiu esta linha, com a simetria refeita à la Gaudry–Schost.
+
 A junção certa **não** é no algoritmo, é no **despachante** — e é exatamente a sua
 intuição ("kangaroo p/ pubkey exposta + brute p/ o resto"):
 
@@ -267,6 +287,9 @@ manter liberdade de licença — as fórmulas são públicas/padrão.
 ---
 
 ## 8. Roadmap de implementação (quando partir pro código)
+
+> ✅ **Concluído** em EXCALIBUR-KANGAROO369: fases 0–6 feitas e testadas (ctest 8/8),
+> puzzle 68 resolvido em dado real. O roadmap abaixo é o registro do plano original.
 
 1. **Fase 0 — matemática EC em CPU (limpa):** `EcInt`, add/double afim, `MulModP`
    (redução `2^256 mod p`), `InvModP` (divsteps), `MultiplyG`, descompressão.
