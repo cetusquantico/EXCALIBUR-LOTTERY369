@@ -186,7 +186,7 @@ def cli():
         ["--allow", "00,00"], ["--allow", "GG"], ["--threads", "-1"],
         ["--draw-size", 257, "--draw-seed", 8], ["--draw-size", 3],
         ["--allow", "00", "--draw-size", 1], ["--draw-seed", 1], ["--mode", "random"],
-        ["--batch", 0], ["--simd", "avx2"], ["--allow-file", FIXTURES/"absent"],
+        ["--batch", 0], ["--simd", "bogus"], ["--allow-file", FIXTURES/"absent"],
         ["--hash160", "0"*40], ["--address", "122AJhKLEfkFBaGAd84pLp1kfE7xK3GdT9"],
         ["--known-key", "0100"], ["--threads", 1, "--threads", 2],
     ]:
