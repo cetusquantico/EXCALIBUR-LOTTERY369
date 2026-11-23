@@ -16,7 +16,7 @@
 
 namespace exlottery {
 namespace {
-constexpr char help[] = R"(EXCALIBUR LOTTERY369 1.0.3 — planejamento e validação de fixtures
+constexpr char help[] = R"(EXCALIBUR LOTTERY369 1.1.0 — planejamento e validação de fixtures
   exlottery --check-pubkey HEX_COMPRIMIDA --address P2PKH [--output human|kv]
   exlottery --puzzle N [listas] --dry-run [--address P2PKH] [--rate candidatos/s]
   exlottery --puzzle N [listas] --fixture NOME [execução]

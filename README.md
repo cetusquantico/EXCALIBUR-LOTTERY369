@@ -1,4 +1,4 @@
-# EXCALIBUR LOTTERY369 1.0.3
+# EXCALIBUR LOTTERY369 1.1.0
 
 Projeto C++17 independente para planejar volantes nos Bitcoin Puzzles 1–160 e medir sua enumeração com criptografia real em fixtures conhecidas. Cada volante é um produto cartesiano de listas de bytes. O enumerador produz diretamente os escalares permitidos, em ordem crescente ou decrescente.
 

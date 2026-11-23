@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.1.0 · 2026-11-23
+
+Publicação open source e reforma do painel.
+
+**Publicação e licença**
+
+- Projeto publicado como open source sob **MIT**. `LICENSE` em texto MIT puro (detectável pelo GitHub) e `NOTICE` creditando o [keyhunt](https://github.com/albertobsd/keyhunt) (MIT, © 2020 Luis Alberto / albertobsd), de onde deriva o núcleo criptográfico vendado, e o libsecp256k1.
+- README com crédito ao keyhunt e um endereço de apoio (doação BTC).
+
+**Painel de volantes (GUI)**
+
+- **Leitura da aposta ao vivo**: cobertura (chance real = fração do intervalo que o volante varre) e tempo de varredura, atualizados conforme a seleção de bytes. A cobertura é a chance honesta, não uma promessa.
+- **Busca pela interface** (botão *Buscar…*): dispara o motor e mostra progresso, taxa, tempo e o resultado verificado ao vivo, sem travar; *Parar* usa SIGINT gracioso.
+- **Checkpoint/resume no diálogo de busca**: salva o progresso e retoma de onde parou (à prova de pausa/reboot); a config vem do próprio checkpoint.
+- **Overlay histórico**: mapa de frequência dos bytes nas 83 chaves resolvidas (prova visual de que a distribuição é uniforme, não dica) e opção de revelar a chave de qualquer puzzle resolvido na grade.
+- **Usabilidade**: botão *Colar* endereço, botão *Copiar hex* do resultado, e *threads* até 32.
+- **Idioma PT/EN** com troca ao vivo (botão no cabeçalho).
+
+**Desempenho e compatibilidade**
+
+- Backend **AVX2** de 8 lanes para HASH160 multi-buffer, com dispatch em runtime (AVX2 → SSSE3 → escalar). `--simd auto` passa a usar o tier mais largo que a CPU executa; `--simd avx2` disponível. Apenas esse objeto usa `-mavx2`, então o binário continua portável e uma CPU sem AVX2 nunca executa instruções AVX2.
+- `docs/COMPATIBILITY.md`: distros suportadas, dependências, build portável (padrão) vs. `-DEXLOTTERY_NATIVE=ON`, dispatch de SIMD e status do AVX2.
+
+**Testes e CI**
+
+- Teste headless novo (`panel_run`, sem X11) cobrindo a busca ao vivo e o ciclo checkpoint → interrupção → resume → conclusão; o teste `crypto` passa a conferir o backend AVX2 contra o scalar quando a CPU suporta.
+- CI instala `libclang-rt-18-dev` (conserta o link do build com sanitizer no clang); matriz g++/clang++ × 5x52/4x64 totalmente verde.
+
+**Documentação**
+
+- `docs/KANGAROO_DESIGN.md` atualizado: o kangaroo saiu do papel e virou o projeto público EXCALIBUR-KANGAROO369; correção do K medido (~2, não 1,15) e nota sobre a reimplementação Gaudry–Schost.
+
 ## 1.0.3 · Revisão local
 
 - Validação offline de número e endereço P2PKH no planejamento dos 160 puzzles.
