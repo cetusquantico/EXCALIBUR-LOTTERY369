@@ -95,6 +95,7 @@ void differential() {
     candidates.push_back(fixture);
     std::vector<std::string> hashes{"scalar", "auto"};
     if (crypto_sse_available()) hashes.push_back("sse");
+    if (crypto_avx2_available()) hashes.push_back("avx2");
     for (bool reverse : {false, true}) {
         if (reverse) std::reverse(candidates.begin(), candidates.end());
         for (auto ec : {"reference", "jump"}) {

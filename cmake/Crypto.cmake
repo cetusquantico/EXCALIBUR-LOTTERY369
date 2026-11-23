@@ -37,3 +37,15 @@ if(EXLOTTERY_SSE AND EXLOTTERY_HAS_SSSE3_FLAG)
     PROPERTIES COMPILE_OPTIONS "-mssse3;-fno-lto")
   target_compile_definitions(exlottery_crypto PRIVATE EX369_HAVE_SSE)
 endif()
+
+# 8-lane AVX2 hashing for Haswell (2013) and newer. Only this one source is built with
+# -mavx2; it is selected at RUNTIME (cpu_info().avx2), so the binary stays portable and a
+# pre-AVX2 CPU transparently falls back to SSSE3 / scalar and never executes AVX2 code.
+option(EXLOTTERY_AVX2 "Compile AVX2 (8-lane) multi-buffer hashing with runtime dispatch" ON)
+check_cxx_compiler_flag("-mavx2" EXLOTTERY_HAS_AVX2_FLAG)
+if(EXLOTTERY_AVX2 AND EXLOTTERY_HAS_AVX2_FLAG)
+  target_sources(exlottery_crypto PRIVATE ${ex_core}/hash/simd/backend_avx2.cpp)
+  set_source_files_properties(${ex_core}/hash/simd/backend_avx2.cpp
+    PROPERTIES COMPILE_OPTIONS "-mavx2;-fno-lto")
+  target_compile_definitions(exlottery_crypto PRIVATE EX369_HAVE_AVX2)
+endif()

@@ -35,16 +35,18 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DEXLOTTERY_NATIVE=ON
 ```
 
-## Modern CPUs (AVX2) — status
+## Modern CPUs (AVX2)
 
-An AVX2 multi-buffer hashing backend exists in the base project
-[excalibur369](https://github.com/cetusquantico/excalibur369) (`backend_avx2.cpp`) and
-roughly doubles hashing throughput on Haswell (2013) and newer. It has **not yet** been
-vendored into this project, whose crypto copy (`vendor/ex369`) currently ships the SSSE3
-backend only. Vendoring it with runtime dispatch (AVX2 → SSSE3 → scalar) is planned.
+An 8-lane AVX2 multi-buffer hashing backend (`vendor/ex369/hash/simd/backend_avx2.cpp`)
+roughly doubles hashing throughput on Haswell (2013) and newer. It is selected at runtime:
+`auto` (the default) uses AVX2 when the CPU supports it, otherwise SSSE3, otherwise scalar.
+Only that one source is built with `-mavx2`, so the binary stays portable and a pre-AVX2 CPU
+never executes AVX2 code. Force a tier with `--simd auto|sse|avx2|scalar`; toggle the build
+with `-DEXLOTTERY_AVX2=ON|OFF` (default ON).
 
-Note: the primary development machine is an Intel i5-3470 (Ivy Bridge), which has AVX but
-**not** AVX2, so the AVX2 path is validated on the base project rather than here.
+Note: the primary development machine is an Intel i5-3470 (Ivy Bridge) — AVX but **not**
+AVX2 — so the AVX2 path is exercised by CI (the Ubuntu runners have AVX2), where the crypto
+test checks the AVX2 backend against the scalar reference.
 
 ## Known-good matrix
 
@@ -53,5 +55,5 @@ Note: the primary development machine is an Intel i5-3470 (Ivy Bridge), which ha
 | Ubuntu 24.04 · g++ / clang++ · 5x52 & 4x64 | ✅ CI |
 | Debian / Kali (dev) | ✅ |
 | x86-64 without SSSE3 | ✅ scalar fallback |
-| AVX2 (Haswell+) | ⏳ backend exists in excalibur369; vendoring planned |
+| AVX2 (Haswell+) | ✅ runtime-dispatched; checked vs scalar on AVX2 CI |
 | ARM / non-x86 | ❌ not targeted |

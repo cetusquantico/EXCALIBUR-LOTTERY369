@@ -49,10 +49,18 @@ const U256& curve_order() {
 
 const ex369::MultiHash& choose_hash(const std::string& backend) {
     if (backend == "scalar") return ex369::multihash_for(ex369::SimdBackend::Scalar);
-    if (backend != "auto" && backend != "sse") throw std::invalid_argument("unknown HASH160 backend");
-    const auto& hash = ex369::multihash_for(ex369::SimdBackend::SSE);
-    if (backend == "sse" && hash.lanes != 4) throw std::invalid_argument("SSSE3 unavailable");
-    return hash;
+    if (backend == "avx2") {
+        const auto& hash = ex369::multihash_for(ex369::SimdBackend::AVX2);
+        if (hash.lanes != 8) throw std::invalid_argument("AVX2 unavailable");
+        return hash;
+    }
+    if (backend == "sse") {
+        const auto& hash = ex369::multihash_for(ex369::SimdBackend::SSE);
+        if (hash.lanes != 4) throw std::invalid_argument("SSSE3 unavailable");
+        return hash;
+    }
+    if (backend != "auto") throw std::invalid_argument("unknown HASH160 backend");
+    return ex369::multihash_for(ex369::SimdBackend::AVX2);   // widest tier the CPU can run
 }
 
 int nibble(char c) {
@@ -169,6 +177,7 @@ std::string hex_bytes(const std::array<std::uint8_t, N>& bytes) {
 } // namespace
 
 bool crypto_sse_available() { return ex369::multihash_for(ex369::SimdBackend::SSE).lanes == 4; }
+bool crypto_avx2_available() { return ex369::multihash_for(ex369::SimdBackend::AVX2).lanes == 8; }
 
 Hash160 reference_hash160(const CryptoKey& key) { return digest_pubkey(reference_pubkey(key)); }
 

@@ -42,6 +42,7 @@ std::string digest_hex(const Hash160& digest);
 // Stable fingerprint of a target set, used to bind a search checkpoint.
 std::string targets_fingerprint(const TargetSet& targets);
 bool crypto_sse_available();
+bool crypto_avx2_available();
 
 // One instance per worker. Returns occurrences of its known fixture only.
 class FixtureVerifier {

@@ -37,7 +37,7 @@ Execução
   --show-private        inclui HEX, bytes ativos e WIF da fixture na saída redirecionada
   --threads N           --batch N            --affinity on|off
   --mode sequential|reverse                  --status SEGUNDOS
-  --backend reference|jump                   --simd auto|scalar|sse
+  --backend reference|jump                   --simd auto|scalar|sse|avx2
   --checkpoint ARQ      --resume ARQ         --checkpoint-interval SEGUNDOS
   --dry-run --address valida o endereço público do puzzle e planeja o volante.
   Na execução de fixtures, --hash160 e --address conferem a identidade conhecida.
@@ -269,8 +269,9 @@ int execute(Metadata args) {
     opt.backend = get(args,"backend",opt.backend);
     opt.simd = get(args,"simd",opt.simd);
     choice(mode,{"sequential","reverse"}); choice(affinity,{"on","off"});
-    choice(opt.backend,{"jump","reference"}); choice(opt.simd,{"auto","scalar","sse"});
+    choice(opt.backend,{"jump","reference"}); choice(opt.simd,{"auto","scalar","sse","avx2"});
     if (opt.simd == "sse" && !crypto_sse_available()) throw std::invalid_argument("SSSE3 unavailable");
+    if (opt.simd == "avx2" && !crypto_avx2_available()) throw std::invalid_argument("AVX2 unavailable");
     opt.reverse = mode == "reverse"; opt.affinity = affinity == "on";
     opt.batch = number(get(args,"batch","4096"),1,UINT64_MAX);
     opt.threads = number(get(args,"threads","1"),1,1024);
