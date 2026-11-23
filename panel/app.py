@@ -139,6 +139,48 @@ def checkpoint_progress(path):
         return None
 
 
+SOLVED_KEYS_PATH = Path(__file__).resolve().parent / "solved_keys.tsv"
+
+
+def load_solved_keys(path=SOLVED_KEYS_PATH):
+    """[(puzzle, scalar_int)] das chaves PÚBLICAS de puzzles resolvidos; [] se ausente."""
+    out = []
+    try:
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            if not line.strip() or line.startswith("#"):
+                continue
+            puzzle, scalar = line.split("\t")
+            out.append((int(puzzle), int(scalar, 16)))
+    except (OSError, ValueError):
+        return []
+    return out
+
+
+def key_bytes(scalar, puzzle):
+    """Bytes big-endian da chave (nbytes=ceil(N/8)); byte[0] é o topo (restrito ao range)."""
+    nbytes = (puzzle + 7) // 8
+    return [(scalar >> (8 * i)) & 0xFF for i in range(nbytes - 1, -1, -1)]
+
+
+def byte_histograms(solved):
+    """(first[256], shared[256]) — frequência do byte do topo vs. dos demais, nas chaves resolvidas."""
+    first, shared = [0] * 256, [0] * 256
+    for puzzle, scalar in solved:
+        values = key_bytes(scalar, puzzle)
+        if values:
+            first[values[0]] += 1
+            for b in values[1:]:
+                shared[b] += 1
+    return first, shared
+
+
+def heat_color(t):
+    """t em [0,1] -> verde suave sobre o fundo claro (mapa de frequência histórica)."""
+    t = 0.0 if t < 0 else 1.0 if t > 1 else t
+    base, strong = (0xea, 0xf1, 0xeb), (0x5f, 0xb0, 0x90)
+    return "#%02x%02x%02x" % tuple(int(base[i] + (strong[i] - base[i]) * t) for i in range(3))
+
+
 _PROGRESS = re.compile(r"completed=(\d+)/(\d+)")
 
 
@@ -451,6 +493,13 @@ class Panel:
         self.active = "shared_allow"
         self.first, self.shared = set(), set()
         self.buttons = []
+        self.solved = load_solved_keys()
+        self.first_hist, self.shared_hist = byte_histograms(self.solved)
+        self.solved_by_puzzle = dict(self.solved)
+        self.history_on = tk.BooleanVar(value=False)
+        self.reveal = tk.StringVar(value="")
+        self.reveal_key = tk.StringVar(value="")
+        self.reveal_bytes = set()
         self._styles()
         root.title("Volantes de bytes · EXCALIBUR LOTTERY369")
         root.configure(bg=PAPER)
@@ -613,6 +662,23 @@ class Panel:
         self.input.pack(side="left",fill="x",expand=True)
         self.input.bind("<Return>", lambda e:self.apply())
         ttk.Button(row,text="Aplicar lista",command=self.apply).pack(side="right",padx=(6,0))
+        history = tk.Frame(editor, bg=WHITE)
+        history.grid(row=5, column=0, sticky="ew", pady=(8, 0))
+        if self.solved:
+            ttk.Checkbutton(history, text="Frequência histórica", variable=self.history_on,
+                            command=self.render).pack(side="left")
+            tk.Label(history, text="Ver chave de:", bg=WHITE, fg=SUBTLE).pack(side="left", padx=(12, 4))
+            combo = ttk.Combobox(history, textvariable=self.reveal, width=7, state="readonly",
+                                 values=["—"] + [f"#{p}" for p, _ in self.solved])
+            combo.pack(side="left")
+            combo.bind("<<ComboboxSelected>>", self.change_reveal)
+            tk.Label(history, textvariable=self.reveal_key, bg=WHITE, fg=INK,
+                     font=(self.mono, -11)).pack(side="left", padx=8)
+            tk.Label(history, text=f"{len(self.solved)} chaves resolvidas · ~uniforme (prova, não dica)",
+                     bg=WHITE, fg=SUBTLE, font=(self.sans, -11)).pack(side="right")
+        else:
+            tk.Label(history, text="(sem solved_keys.tsv — overlay histórico indisponível)",
+                     bg=WHITE, fg=SUBTLE, font=(self.sans, -11)).pack(side="left")
 
     def values(self):
         return self.first if self.active=="first_allow" else self.shared
@@ -621,6 +687,21 @@ class Panel:
         ticket = record(int(self.puzzle.get()), self.first, self.shared)
         ticket["link_first"] = self.link_first.get()
         return ticket
+
+    def change_reveal(self, event=None):
+        label = self.reveal.get()
+        if not label or label == "—":
+            self.reveal_bytes, _ = set(), self.reveal_key.set("")
+        else:
+            puzzle = int(label.lstrip("#"))
+            scalar = self.solved_by_puzzle.get(puzzle)
+            if scalar is None:
+                self.reveal_bytes, _ = set(), self.reveal_key.set("")
+            else:
+                self.reveal_bytes = set(key_bytes(scalar, puzzle))
+                width = (puzzle + 7) // 8 * 2
+                self.reveal_key.set(f"#{puzzle}: {scalar:0{width}x}")
+        self.render()
 
     def open_run(self):
         if not self.sync():
@@ -668,14 +749,24 @@ class Panel:
         automatic = self.active == "first_allow" and self.link_first.get()
         self.input.configure(state="readonly" if automatic else "normal")
         values = self.values()
+        heat = self.history_on.get() and bool(self.solved)
+        hist = self.first_hist if self.active == "first_allow" else self.shared_hist
+        hmax = max(hist) if heat and any(hist) else 1
         for value,b in enumerate(self.buttons):
             legal = self.low <= value <= self.high and not automatic
             chosen = value in values
-            bg = TEAL if chosen else ("#eaf1eb" if legal else "#f8f9f7")
+            if chosen:
+                bg = TEAL
+            elif heat and legal:
+                bg = heat_color(hist[value] / hmax)
+            else:
+                bg = "#eaf1eb" if legal else "#f8f9f7"
+            border = "#d98a00" if value in self.reveal_bytes else WHITE
             b.configure(background=bg,foreground=WHITE if chosen else INK,
                         activebackground="#b3d9c6", activeforeground=INK,
                         relief="sunken" if chosen else "flat",
                         disabledforeground=WHITE if chosen else "#9baba2",
+                        highlightbackground=border, highlightcolor=border,
                         state="normal" if legal else "disabled",takefocus=legal)
         self.info.set(f"Faixa permitida  {self.low:02X}–{self.high:02X}     •     {len(values)} selecionados")
         self.entry.set(format_bytes(values).upper())

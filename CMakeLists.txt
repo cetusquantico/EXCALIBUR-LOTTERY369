@@ -37,6 +37,7 @@ target_link_libraries(exlottery_core PUBLIC exlottery_crypto OpenSSL::Crypto Thr
 add_executable(exlottery src/main.cpp)
 target_link_libraries(exlottery PRIVATE exlottery_core)
 configure_file(panel/app.py panel/app.py COPYONLY)
+configure_file(panel/solved_keys.tsv panel/solved_keys.tsv COPYONLY)
 foreach(list_name primeiro compartilhada)
     configure_file(grupos/${list_name}.txt grupos/${list_name}.txt COPYONLY)
 endforeach()

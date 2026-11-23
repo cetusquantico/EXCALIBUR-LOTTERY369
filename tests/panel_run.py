@@ -93,9 +93,23 @@ def checkpoint_and_resume():
         assert int(run2.result["session_completed"]) == total - done, (run2.result, done)
 
 
+def history_data():
+    # #3 data pipeline (pure, no Tk): solved keys load, byte extraction, histograms.
+    solved = app.load_solved_keys()
+    assert len(solved) >= 50, len(solved)
+    assert app.key_bytes(0xd2c55, 20) == [0x0d, 0x2c, 0x55]      # puzzle 20
+    by = dict(solved)
+    assert 20 in by and app.key_bytes(by[20], 20)[-1] == 0x55
+    first, shared = app.byte_histograms(solved)
+    # every solved key contributes exactly one top byte and (nbytes-1) shared bytes
+    assert sum(first) == len(solved)
+    assert sum(shared) == sum((p + 7) // 8 - 1 for p, _ in solved)
+
+
 def main():
     hit_and_miss()
     checkpoint_and_resume()
+    history_data()
     print("panel_run OK")
 
 
