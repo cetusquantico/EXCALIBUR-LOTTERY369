@@ -253,6 +253,7 @@ class RunDialog:
     def __init__(self, parent, binary, ticket):
         self.binary, self.ticket = Path(binary), ticket
         self.run = self.tmp = self.after_id = None
+        self.found_private = ""
         self.t0 = 0.0
         total, interval = wheel_size(ticket)
 
@@ -271,12 +272,13 @@ class RunDialog:
 
         tk.Label(top, text="Endereço do puzzle", bg=WHITE, fg=INK, anchor="w").grid(row=1, column=0, sticky="w")
         self.address = tk.StringVar()
-        self.addr_entry = ttk.Entry(top, textvariable=self.address, width=42, font=("TkFixedFont", -12))
-        self.addr_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=3)
+        self.addr_entry = ttk.Entry(top, textvariable=self.address, width=36, font=("TkFixedFont", -12))
+        self.addr_entry.grid(row=1, column=1, sticky="ew", pady=3)
+        ttk.Button(top, text="Colar", width=7, command=self._paste_address).grid(row=1, column=2, sticky="e")
 
         tk.Label(top, text="Threads", bg=WHITE, fg=INK, anchor="w").grid(row=2, column=0, sticky="w")
         self.threads = tk.IntVar(value=2)
-        ttk.Spinbox(top, from_=1, to=8, width=5, textvariable=self.threads).grid(row=2, column=1, sticky="w", pady=3)
+        ttk.Spinbox(top, from_=1, to=32, width=5, textvariable=self.threads).grid(row=2, column=1, sticky="w", pady=3)
         self.stop_hit = tk.BooleanVar(value=True)
         ttk.Checkbutton(top, text="Parar no 1º acerto", variable=self.stop_hit).grid(row=2, column=2, sticky="e")
 
@@ -309,6 +311,8 @@ class RunDialog:
         self.start_btn.pack(side="left", padx=4)
         self.stop_btn = ttk.Button(actions, text="Parar", command=self.cancel, state="disabled")
         self.stop_btn.pack(side="left", padx=4)
+        self.copy_btn = ttk.Button(actions, text="Copiar hex", command=self._copy_result, state="disabled")
+        self.copy_btn.pack(side="left", padx=4)
         ttk.Button(actions, text="Fechar", command=self.close).pack(side="left", padx=4)
         top.protocol("WM_DELETE_WINDOW", self.close)
         self.addr_entry.focus_set()
@@ -323,6 +327,22 @@ class RunDialog:
         self.start_btn.configure(state="disabled" if flag else "normal")
         self.stop_btn.configure(state="normal" if flag else "disabled")
         self.addr_entry.configure(state="disabled" if flag else "normal")
+
+    def _paste_address(self):
+        try:
+            tokens = self.top.clipboard_get().split()
+        except tk.TclError:
+            return
+        if tokens:
+            self.address.set(tokens[0].strip())
+
+    def _copy_result(self):
+        text = self.found_private or self.textbox.get("1.0", "end").strip()
+        if not text:
+            return
+        self.top.clipboard_clear()
+        self.top.clipboard_append(text)
+        self.top.update_idletasks()
 
     def _pick_ckpt(self):
         path = filedialog.asksaveasfilename(parent=self.top, title="Checkpoint (.json)",
@@ -362,6 +382,8 @@ class RunDialog:
             return
         self.t0 = time.monotonic()
         self._write("")
+        self.found_private = ""
+        self.copy_btn.configure(state="disabled")
         self._running(True)
         self._tick()
 
@@ -397,6 +419,8 @@ class RunDialog:
             self.progress.set(f"{completed:,}/{total:,} ({100 * completed / total:.1f}%)".replace(",", "."))
         if matches > 0:
             self.state.set("✔ ACHOU — chave confirmada")
+            self.found_private = result.get("found_private", "")
+            self.copy_btn.configure(state="normal")
             self._write("private : {}\nWIF     : {}\nendereço: {}".format(
                 result.get("found_private", "?"), result.get("found_wif", "?"),
                 result.get("found_address", "?")))
