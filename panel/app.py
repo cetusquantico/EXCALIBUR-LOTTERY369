@@ -108,14 +108,35 @@ def wheel_size(ticket):
     return first * shared ** (length - 1), 1 << (puzzle - 1)
 
 
-def build_search_cmd(binary, ticket, address, threads, stop_on_hit, found_path):
+def build_search_cmd(binary, ticket, address, threads, stop_on_hit, found_path,
+                     checkpoint=None, interval=30):
     """Comando do motor para varrer o volante procurando `address` (saída kv, status a cada 1s)."""
     cmd = [str(binary), *ticket_args(ticket), "--search", "--address", address,
            "--output", "kv", "--status", "1", "--threads", str(int(threads)),
            "--found", str(found_path)]
     if stop_on_hit:
         cmd.append("--stop-on-hit")
+    if checkpoint:
+        cmd += ["--checkpoint", str(checkpoint), "--checkpoint-interval", str(int(interval))]
     return cmd
+
+
+def build_resume_cmd(binary, checkpoint, threads, stop_on_hit, found_path):
+    """Continua uma busca a partir de um checkpoint. A config (volante + alvo) vem do arquivo."""
+    cmd = [str(binary), "--resume", str(checkpoint), "--output", "kv", "--status", "1",
+           "--threads", str(int(threads)), "--found", str(found_path)]
+    if stop_on_hit:
+        cmd.append("--stop-on-hit")
+    return cmd
+
+
+def checkpoint_progress(path):
+    """(completed, total) de um checkpoint de busca, ou None se não for legível."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        return int(data["completed"]), int(data["total"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 _PROGRESS = re.compile(r"completed=(\d+)/(\d+)")
@@ -217,12 +238,20 @@ class RunDialog:
         self.stop_hit = tk.BooleanVar(value=True)
         ttk.Checkbutton(top, text="Parar no 1º acerto", variable=self.stop_hit).grid(row=2, column=2, sticky="e")
 
+        tk.Label(top, text="Checkpoint", bg=WHITE, fg=INK, anchor="w").grid(row=3, column=0, sticky="w")
+        self.ckpt = tk.StringVar()
+        ttk.Entry(top, textvariable=self.ckpt, font=("TkFixedFont", -12)).grid(row=3, column=1, sticky="ew", pady=3)
+        ttk.Button(top, text="Arquivo…", command=self._pick_ckpt).grid(row=3, column=2, sticky="e")
+        tk.Label(top, text="Opcional: salva o progresso. Se o arquivo já existir, a busca retoma de onde parou "
+                 "(a config vem do checkpoint).", bg=WHITE, fg=SUBTLE, anchor="w", justify="left",
+                 wraplength=520, font=("TkDefaultFont", -11)).grid(row=4, column=0, columnspan=3, sticky="ew")
+
         self.bar = ttk.Progressbar(top, mode="determinate")
-        self.bar.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(12, 4))
+        self.bar.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(12, 4))
         self.progress, self.rate = tk.StringVar(value="—"), tk.StringVar(value="—")
         self.elapsed, self.state = tk.StringVar(value="—"), tk.StringVar(value="pronto")
         meters = tk.Frame(top, bg=WHITE)
-        meters.grid(row=4, column=0, columnspan=3, sticky="ew")
+        meters.grid(row=6, column=0, columnspan=3, sticky="ew")
         for i, (name, var) in enumerate((("Varridos", self.progress), ("Taxa", self.rate),
                                          ("Tempo", self.elapsed), ("Estado", self.state))):
             tk.Label(meters, text=name, bg=WHITE, fg=SUBTLE, font=("TkDefaultFont", -11)).grid(row=0, column=i, sticky="w", padx=(0, 16))
@@ -230,10 +259,10 @@ class RunDialog:
 
         self.textbox = tk.Text(top, height=4, width=62, bg="#f3f6f2", fg=INK, relief="flat",
                                font=("TkFixedFont", -12), wrap="word", state="disabled")
-        self.textbox.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(10, 6))
+        self.textbox.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(10, 6))
 
         actions = tk.Frame(top, bg=WHITE)
-        actions.grid(row=6, column=0, columnspan=3, sticky="e")
+        actions.grid(row=8, column=0, columnspan=3, sticky="e")
         self.start_btn = ttk.Button(actions, text="Iniciar", style="Accent.TButton", command=self.start)
         self.start_btn.pack(side="left", padx=4)
         self.stop_btn = ttk.Button(actions, text="Parar", command=self.cancel, state="disabled")
@@ -253,23 +282,43 @@ class RunDialog:
         self.stop_btn.configure(state="normal" if flag else "disabled")
         self.addr_entry.configure(state="disabled" if flag else "normal")
 
+    def _pick_ckpt(self):
+        path = filedialog.asksaveasfilename(parent=self.top, title="Checkpoint (.json)",
+                                            defaultextension=".json",
+                                            filetypes=[("Checkpoint JSON", "*.json"), ("Todos", "*")])
+        if path:
+            self.ckpt.set(path)
+
     def start(self):
+        ckpt = self.ckpt.get().strip()
+        resuming = bool(ckpt) and Path(ckpt).exists()
         address = self.address.get().strip()
-        if not address:
+        if not resuming and not address:
             messagebox.showerror("Buscar", "Informe o endereço público do puzzle.", parent=self.top)
             return
         handle = tempfile.NamedTemporaryFile("w", prefix="exlottery-hit-", suffix=".txt", delete=False)
         handle.close()
         self.tmp = Path(handle.name)
-        cmd = build_search_cmd(self.binary, self.ticket, address, self.threads.get(),
-                               self.stop_hit.get(), self.tmp)
+        if resuming:
+            cmd = build_resume_cmd(self.binary, ckpt, self.threads.get(), self.stop_hit.get(), self.tmp)
+            prog = checkpoint_progress(ckpt)
+            if prog and prog[1]:
+                self.bar.configure(maximum=prog[1], value=prog[0])
+                pct = 100 * prog[0] / prog[1]
+                self.progress.set(f"{prog[0]:,}/{prog[1]:,} ({pct:.1f}%)".replace(",", "."))
+                self.state.set(f"retomando de {pct:.1f}%…")
+            else:
+                self.state.set("retomando…")
+        else:
+            cmd = build_search_cmd(self.binary, self.ticket, address, self.threads.get(),
+                                   self.stop_hit.get(), self.tmp, checkpoint=ckpt or None)
+            self.state.set("buscando…")
         try:
             self.run = SearchRun(cmd)
         except OSError as exc:
             messagebox.showerror("Buscar", f"Não foi possível iniciar o motor:\n{exc}", parent=self.top)
             return
         self.t0 = time.monotonic()
-        self.state.set("buscando…")
         self._write("")
         self._running(True)
         self._tick()
