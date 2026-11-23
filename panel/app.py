@@ -31,6 +31,113 @@ INK = "#172e28"
 SUBTLE = "#456057"
 WHITE = "#ffffff"
 
+# ---- i18n: Portuguese (default) / English -----------------------------------
+LANG = "pt"
+
+
+def set_language(code):
+    global LANG
+    LANG = "en" if code == "en" else "pt"
+
+
+def L(pt, en):
+    """Return the string for the current UI language (used for dynamic text)."""
+    return en if LANG == "en" else pt
+
+
+# Static widget labels, as written in the code (PT) -> EN. The tree-walk swaps any
+# widget whose -text equals a key here, in either direction, so the source keeps PT
+# literals (tests that assert PT strings stay valid at the default language).
+TR_PT2EN = {
+    "Volantes de bytes": "Byte wheels",
+    "Volantes salvos": "Saved wheels",
+    "Novo": "New",
+    "Excluir": "Delete",
+    "Nome do volante": "Wheel name",
+    "Salvar": "Save",
+    "Puzzle": "Puzzle",
+    "Candidatos": "Candidates",
+    "Cobertura (chance real)": "Coverage (real odds)",
+    "Varredura (~2 M/s)": "Sweep (~2 M/s)",
+    "Primeira combinação": "First combination",
+    "Última combinação": "Last combination",
+    "Bytes selecionados": "Selected bytes",
+    ("Cobertura = fração do intervalo que o volante varre, ou seja a "
+     "chance real de a chave cair nele. A chave é sorteio uniforme: nenhum byte é "
+     "mais provável que outro."):
+        ("Coverage = the fraction of the interval the wheel sweeps, i.e. the real "
+         "chance the key falls in it. The key is a uniform draw: no byte is more "
+         "likely than another."),
+    "Primeiro byte": "First byte",
+    "Bytes compartilhados": "Shared bytes",
+    "Todos": "All",
+    "Limpar": "Clear",
+    "Vincular primeiro byte à seleção": "Link first byte to selection",
+    "Lista hexadecimal": "Hex list",
+    "Aplicar lista": "Apply list",
+    "Frequência histórica": "Historical frequency",
+    "Ver chave de:": "View key of:",
+    "(sem solved_keys.tsv — overlay histórico indisponível)":
+        "(no solved_keys.tsv — history overlay unavailable)",
+    "Lista .txt": "List .txt",
+    "Abrir lista da aba…": "Open tab list…",
+    "Exportar lista da aba…": "Export tab list…",
+    "Copiar argumentos": "Copy arguments",
+    "Validar volante": "Validate wheel",
+    "Buscar…": "Search…",
+    # RunDialog chrome
+    "Endereço do puzzle": "Puzzle address",
+    "Colar": "Paste",
+    "Threads": "Threads",
+    "Parar no 1º acerto": "Stop at first hit",
+    "Checkpoint": "Checkpoint",
+    "Arquivo…": "File…",
+    ("Opcional: salva o progresso. Se o arquivo já existir, a busca retoma de onde parou "
+     "(a config vem do checkpoint)."):
+        ("Optional: saves progress. If the file already exists, the search resumes where it "
+         "stopped (config comes from the checkpoint)."),
+    "Varridos": "Swept",
+    "Taxa": "Rate",
+    "Tempo": "Time",
+    "Estado": "State",
+    "Iniciar": "Start",
+    "Parar": "Stop",
+    "Copiar hex": "Copy hex",
+    "Fechar": "Close",
+}
+TR_EN2PT = {v: k for k, v in TR_PT2EN.items()}
+
+
+def retranslate_tree(widget):
+    """Swap every descendant widget's -text to the current language."""
+    table = TR_PT2EN if LANG == "en" else TR_EN2PT
+    try:
+        cur = widget.cget("text")
+    except (tk.TclError, AttributeError):
+        cur = None
+    if cur and cur in table:
+        try:
+            widget.configure(text=table[cur])
+        except tk.TclError:
+            pass
+    for child in widget.winfo_children():
+        retranslate_tree(child)
+
+
+def retranslate_menu(menu):
+    table = TR_PT2EN if LANG == "en" else TR_EN2PT
+    try:
+        last = menu.index("end")
+    except tk.TclError:
+        return
+    for i in range(0, (last or 0) + 1):
+        try:
+            label = menu.entrycget(i, "label")
+        except tk.TclError:
+            continue
+        if label in table:
+            menu.entryconfigure(i, label=table[label])
+
 
 def config_path():
     xdg = Path(os.environ.get("XDG_CONFIG_HOME", ""))
@@ -58,7 +165,7 @@ def format_coverage(fraction):
 
 
 def format_duration(seconds):
-    for name, size in (("anos", 31557600.0), ("dias", 86400.0), ("h", 3600.0), ("min", 60.0)):
+    for name, size in ((L("anos", "yr"), 31557600.0), (L("dias", "d"), 86400.0), ("h", 3600.0), ("min", 60.0)):
         if seconds >= size:
             value = seconds / size
             return f"{value:.3g} {name}" if value >= 1000 else f"{value:.1f} {name}"
@@ -69,12 +176,15 @@ def parse_list(text, low=0, high=255):
     if not isinstance(text, str) or not re.fullmatch(
         r"\s*[a-fA-F0-9]{2}(?:(?:\s*,\s*|\s+)[a-fA-F0-9]{2})*\s*", text
     ):
-        raise ValueError("Use dois dígitos por byte, separados por vírgulas ou espaços.")
+        raise ValueError(L("Use dois dígitos por byte, separados por vírgulas ou espaços.",
+                           "Use two digits per byte, separated by commas or spaces."))
     values = [int(v, 16) for v in re.findall(r"[a-fA-F0-9]{2}", text)]
     if len(values) != len(set(values)):
-        raise ValueError("Cada byte pode aparecer apenas uma vez na lista.")
+        raise ValueError(L("Cada byte pode aparecer apenas uma vez na lista.",
+                           "Each byte may appear only once in the list."))
     if min(values) < low or max(values) > high:
-        raise ValueError(f"A lista aceita bytes de {low:02X} a {high:02X}.")
+        raise ValueError(L(f"A lista aceita bytes de {low:02X} a {high:02X}.",
+                           f"The list accepts bytes from {low:02X} to {high:02X}."))
     return set(values)
 
 
@@ -87,9 +197,11 @@ def validate_name(name):
 def record(puzzle, first, shared):
     low, high = first_bounds(puzzle)
     if not first or not shared:
-        raise ValueError("Selecione pelo menos um byte em cada lista.")
+        raise ValueError(L("Selecione pelo menos um byte em cada lista.",
+                           "Select at least one byte in each list."))
     if min(first) < low or max(first) > high or min(shared) < 0 or max(shared) > 255:
-        raise ValueError(f"O primeiro byte do puzzle {puzzle} deve estar entre {low:02X} e {high:02X}.")
+        raise ValueError(L(f"O primeiro byte do puzzle {puzzle} deve estar entre {low:02X} e {high:02X}.",
+                           f"Puzzle {puzzle}'s first byte must be between {low:02X} and {high:02X}."))
     return {"puzzle": puzzle, "first_allow": format_bytes(first), "shared_allow": format_bytes(shared)}
 
 
@@ -258,15 +370,15 @@ class RunDialog:
         total, interval = wheel_size(ticket)
 
         self.top = top = tk.Toplevel(parent)
-        top.title(f"Buscar · Puzzle {ticket['puzzle']}")
+        top.title(L("Buscar · Puzzle ", "Search · Puzzle ") + str(ticket['puzzle']))
         top.configure(bg=WHITE, padx=16, pady=14)
         top.transient(parent)
         top.resizable(False, False)
         top.columnconfigure(1, weight=1)
 
-        head = (f"Candidatos {total:,}".replace(",", ".")
-                + f"   ·   Cobertura (chance) {format_coverage(total / interval)}"
-                + f"   ·   Varredura ~{format_duration(total / REFERENCE_RATE)}")
+        head = (L("Candidatos ", "Candidates ") + f"{total:,}".replace(",", ".")
+                + L("   ·   Cobertura (chance) ", "   ·   Coverage (chance) ") + format_coverage(total / interval)
+                + L("   ·   Varredura ~", "   ·   Sweep ~") + format_duration(total / REFERENCE_RATE))
         tk.Label(top, text=head, bg=WHITE, fg=SUBTLE, anchor="w",
                  font=("TkDefaultFont", -12)).grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 10))
 
@@ -293,7 +405,7 @@ class RunDialog:
         self.bar = ttk.Progressbar(top, mode="determinate")
         self.bar.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(12, 4))
         self.progress, self.rate = tk.StringVar(value="—"), tk.StringVar(value="—")
-        self.elapsed, self.state = tk.StringVar(value="—"), tk.StringVar(value="pronto")
+        self.elapsed, self.state = tk.StringVar(value="—"), tk.StringVar(value=L("pronto", "ready"))
         meters = tk.Frame(top, bg=WHITE)
         meters.grid(row=6, column=0, columnspan=3, sticky="ew")
         for i, (name, var) in enumerate((("Varridos", self.progress), ("Taxa", self.rate),
@@ -315,6 +427,7 @@ class RunDialog:
         self.copy_btn.pack(side="left", padx=4)
         ttk.Button(actions, text="Fechar", command=self.close).pack(side="left", padx=4)
         top.protocol("WM_DELETE_WINDOW", self.close)
+        retranslate_tree(top)
         self.addr_entry.focus_set()
 
     def _write(self, text):
@@ -356,7 +469,9 @@ class RunDialog:
         resuming = bool(ckpt) and Path(ckpt).exists()
         address = self.address.get().strip()
         if not resuming and not address:
-            messagebox.showerror("Buscar", "Informe o endereço público do puzzle.", parent=self.top)
+            messagebox.showerror(L("Buscar", "Search"),
+                                 L("Informe o endereço público do puzzle.", "Enter the puzzle's public address."),
+                                 parent=self.top)
             return
         handle = tempfile.NamedTemporaryFile("w", prefix="exlottery-hit-", suffix=".txt", delete=False)
         handle.close()
@@ -368,17 +483,19 @@ class RunDialog:
                 self.bar.configure(maximum=prog[1], value=prog[0])
                 pct = 100 * prog[0] / prog[1]
                 self.progress.set(f"{prog[0]:,}/{prog[1]:,} ({pct:.1f}%)".replace(",", "."))
-                self.state.set(f"retomando de {pct:.1f}%…")
+                self.state.set(L(f"retomando de {pct:.1f}%…", f"resuming from {pct:.1f}%…"))
             else:
-                self.state.set("retomando…")
+                self.state.set(L("retomando…", "resuming…"))
         else:
             cmd = build_search_cmd(self.binary, self.ticket, address, self.threads.get(),
                                    self.stop_hit.get(), self.tmp, checkpoint=ckpt or None)
-            self.state.set("buscando…")
+            self.state.set(L("buscando…", "searching…"))
         try:
             self.run = SearchRun(cmd)
         except OSError as exc:
-            messagebox.showerror("Buscar", f"Não foi possível iniciar o motor:\n{exc}", parent=self.top)
+            messagebox.showerror(L("Buscar", "Search"),
+                                 L(f"Não foi possível iniciar o motor:\n{exc}", f"Could not start the engine:\n{exc}"),
+                                 parent=self.top)
             return
         self.t0 = time.monotonic()
         self._write("")
@@ -418,28 +535,32 @@ class RunDialog:
             self.bar.configure(maximum=total, value=completed)
             self.progress.set(f"{completed:,}/{total:,} ({100 * completed / total:.1f}%)".replace(",", "."))
         if matches > 0:
-            self.state.set("✔ ACHOU — chave confirmada")
+            self.state.set(L("✔ ACHOU — chave confirmada", "✔ FOUND — key confirmed"))
             self.found_private = result.get("found_private", "")
             self.copy_btn.configure(state="normal")
-            self._write("private : {}\nWIF     : {}\nendereço: {}".format(
+            self._write("private : {}\nWIF     : {}\n{}: {}".format(
                 result.get("found_private", "?"), result.get("found_wif", "?"),
-                result.get("found_address", "?")))
+                L("endereço", "address"), result.get("found_address", "?")))
         elif rc in (0, None) and total and completed >= total:
-            self.state.set("varredura completa — sem acerto")
-            self._write("A chave não está neste volante. Amplie a seleção de bytes ou escolha "
-                        "outro puzzle — a cobertura mostra a chance real antes de rodar.")
+            self.state.set(L("varredura completa — sem acerto", "sweep complete — no hit"))
+            self._write(L("A chave não está neste volante. Amplie a seleção de bytes ou escolha "
+                          "outro puzzle — a cobertura mostra a chance real antes de rodar.",
+                          "The key isn't in this wheel. Widen the byte selection or pick another "
+                          "puzzle — the coverage shows the real chance before you run."))
         elif rc == 130 or any("interromp" in m.lower() for m in self.run.messages):
-            self.state.set("interrompido")
-            self._write(f"Busca parada após {completed:,} candidatos.".replace(",", "."))
+            self.state.set(L("interrompido", "interrupted"))
+            self._write(L(f"Busca parada após {completed:,} candidatos.",
+                          f"Search stopped after {completed:,} candidates.").replace(",", "."))
         else:
-            self.state.set("falhou")
-            self._write("\n".join(self.run.messages) or f"O motor saiu com código {rc}.")
+            self.state.set(L("falhou", "failed"))
+            self._write("\n".join(self.run.messages) or L(f"O motor saiu com código {rc}.",
+                                                          f"The engine exited with code {rc}."))
         self._running(False)
         self.run = None
 
     def cancel(self):
         if self.run is not None:
-            self.state.set("parando…")
+            self.state.set(L("parando…", "stopping…"))
             self.run.stop()
 
     def close(self):
@@ -533,6 +654,11 @@ class Panel:
         root.rowconfigure(1, weight=1)
         top = tk.Frame(root, bg=DARK, padx=20, pady=8)
         top.grid(row=0, column=0, sticky="ew")
+        lang = tk.Frame(top, bg=DARK)
+        lang.pack(side="right", anchor="ne")
+        for code in ("PT", "EN"):
+            ttk.Button(lang, text=code, width=4,
+                       command=lambda c=code: self.set_lang(c.lower())).pack(side="left", padx=2)
         tk.Label(top, text="EXCALIBUR LOTTERY369", bg=DARK, fg="#a1d4bd",
                  font=(self.sans,-11,"bold")).pack(anchor="w")
         tk.Label(top, text="Volantes de bytes", bg=DARK, fg=WHITE,
@@ -559,6 +685,7 @@ class Panel:
         menu.add_command(label="Abrir lista da aba…", command=self.import_list)
         menu.add_command(label="Exportar lista da aba…", command=self.export_list)
         files.configure(menu=menu)
+        self.files_menu = menu
         files.pack(side="left", padx=3)
         ttk.Button(footer, text="Copiar argumentos", command=self.copy).pack(side="left", padx=6)
         ttk.Button(footer, text="Validar volante", command=self.validate).pack(side="left")
@@ -698,8 +825,9 @@ class Panel:
             combo.bind("<<ComboboxSelected>>", self.change_reveal)
             tk.Label(history, textvariable=self.reveal_key, bg=WHITE, fg=INK,
                      font=(self.mono, -11)).pack(side="left", padx=8)
-            tk.Label(history, text=f"{len(self.solved)} chaves resolvidas · ~uniforme (prova, não dica)",
-                     bg=WHITE, fg=SUBTLE, font=(self.sans, -11)).pack(side="right")
+            self.hist_caption = tk.Label(history, bg=WHITE, fg=SUBTLE, font=(self.sans, -11))
+            self.hist_caption.pack(side="right")
+            self._set_hist_caption()
         else:
             tk.Label(history, text="(sem solved_keys.tsv — overlay histórico indisponível)",
                      bg=WHITE, fg=SUBTLE, font=(self.sans, -11)).pack(side="left")
@@ -792,9 +920,11 @@ class Panel:
                         disabledforeground=WHITE if chosen else "#9baba2",
                         highlightbackground=border, highlightcolor=border,
                         state="normal" if legal else "disabled",takefocus=legal)
-        self.info.set(f"Faixa permitida  {self.low:02X}–{self.high:02X}     •     {len(values)} selecionados")
+        self.info.set(L(f"Faixa permitida  {self.low:02X}–{self.high:02X}     •     {len(values)} selecionados",
+                        f"Allowed range  {self.low:02X}–{self.high:02X}     •     {len(values)} selected"))
         self.entry.set(format_bytes(values).upper())
-        self.sizes.set(f"{len(self.first)} inicial  /  {len(self.shared)} compartilhados")
+        self.sizes.set(L(f"{len(self.first)} inicial  /  {len(self.shared)} compartilhados",
+                         f"{len(self.first)} first  /  {len(self.shared)} shared"))
         length = (int(self.puzzle.get())+7)//8
         total = len(self.first)*len(self.shared)**(length-1) if self.first and self.shared else 0
         self.count.set(f"{total:,}".replace(",","."))
@@ -806,6 +936,21 @@ class Panel:
                     if total else "—")
         self.status.set("")
 
+    def set_lang(self, code):
+        set_language(code)
+        self.root.title(L("Volantes de bytes · EXCALIBUR LOTTERY369",
+                          "Byte wheels · EXCALIBUR LOTTERY369"))
+        retranslate_tree(self.root)
+        retranslate_menu(self.files_menu)
+        self._set_hist_caption()
+        self.render()
+
+    def _set_hist_caption(self):
+        if getattr(self, "hist_caption", None) is not None:
+            self.hist_caption.configure(text=L(
+                f"{len(self.solved)} chaves resolvidas · ~uniforme (prova, não dica)",
+                f"{len(self.solved)} solved keys · ~uniform (proof, not a tip)"))
+
     def change_link(self):
         requested = self.link_first.get()
         self.link_first.set(not requested)
@@ -815,7 +960,8 @@ class Panel:
 
     def manual(self):
         if self.active == "first_allow" and self.link_first.get():
-            self.status.set("Desmarque o vínculo para editar o primeiro byte manualmente.")
+            self.status.set(L("Desmarque o vínculo para editar o primeiro byte manualmente.",
+                              "Unlink the first byte to edit it manually."))
             return False
         return True
 
@@ -931,17 +1077,18 @@ class Panel:
                 return
         if self.write(name,ticket):
             self.open_ticket(name,ticket)
-            self.status.set(f"Volante salvo · {name}")
+            self.status.set(L(f"Volante salvo · {name}", f"Wheel saved · {name}"))
 
     def delete(self):
         name = self.selected
         if name is None:
-            self.status.set("Selecione um volante salvo para excluí-lo.")
+            self.status.set(L("Selecione um volante salvo para excluí-lo.", "Select a saved wheel to delete it."))
             return
         if messagebox.askyesno("Excluir volante",f"Excluir «{name}» do catálogo?",parent=self.root):
             if self.write(name,None):
                 self.selected = None
-                self.status.set("Volante excluído. A seleção continua no editor.")
+                self.status.set(L("Volante excluído. A seleção continua no editor.",
+                                  "Wheel deleted. The selection stays in the editor."))
 
     def copy(self):
         if not self.sync():
@@ -953,7 +1100,8 @@ class Panel:
             return
         self.root.clipboard_clear()
         self.root.clipboard_append(args)
-        self.status.set("Argumentos do volante copiados para o terminal.")
+        self.status.set(L("Argumentos do volante copiados para o terminal.",
+                          "Wheel arguments copied to the terminal."))
 
     def import_list(self):
         if not self.manual(): return
@@ -968,7 +1116,7 @@ class Panel:
         self.values().clear()
         self.values().update(data)
         self.render()
-        self.status.set(f"Lista carregada · {len(data)} valores")
+        self.status.set(L(f"Lista carregada · {len(data)} valores", f"List loaded · {len(data)} values"))
 
     def export_list(self):
         if not self.sync():
@@ -992,7 +1140,7 @@ class Panel:
                     tmp.unlink(missing_ok=True)
         except OSError as exc:
             return messagebox.showerror("Exportar lista", str(exc), parent=self.root)
-        self.status.set(f"Lista exportada · {Path(path).name}")
+        self.status.set(L(f"Lista exportada · {Path(path).name}", f"List exported · {Path(path).name}"))
 
     def validate(self):
         if not self.sync():
@@ -1006,7 +1154,8 @@ class Panel:
             data = dict(line.split("=",1) for line in p.stdout.splitlines() if "=" in line)
             if int(data["total"]) != int(self.count.get().replace(".","")):
                 raise ValueError("O total calculado pelo executável diverge da prévia.")
-            self.status.set(f"Validado pelo motor · {self.count.get()} candidatos")
+            self.status.set(L(f"Validado pelo motor · {self.count.get()} candidatos",
+                              f"Validated by the engine · {self.count.get()} candidates"))
         except (ValueError,OSError,KeyError,subprocess.TimeoutExpired) as exc:
             messagebox.showerror("Validar volante",str(exc),parent=self.root)
 
