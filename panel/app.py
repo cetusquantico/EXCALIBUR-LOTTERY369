@@ -45,6 +45,22 @@ def format_bytes(values):
     return ",".join(f"{v:02x}" for v in sorted(values))
 
 
+REFERENCE_RATE = 2_000_000   # candidatos/s de referência para a estimativa de varredura (i5-3470)
+
+
+def format_coverage(fraction):
+    """Fração do intervalo coberta, em porcentagem legível (notação científica p/ valores ínfimos)."""
+    return f"{fraction * 100.0:.3g} %"
+
+
+def format_duration(seconds):
+    for name, size in (("anos", 31557600.0), ("dias", 86400.0), ("h", 3600.0), ("min", 60.0)):
+        if seconds >= size:
+            value = seconds / size
+            return f"{value:.3g} {name}" if value >= 1000 else f"{value:.1f} {name}"
+    return f"{seconds:.1f} s" if seconds >= 1 else "< 1 s"
+
+
 def parse_list(text, low=0, high=255):
     if not isinstance(text, str) or not re.fullmatch(
         r"\s*[a-fA-F0-9]{2}(?:(?:\s*,\s*|\s+)[a-fA-F0-9]{2})*\s*", text
@@ -235,15 +251,25 @@ class Panel:
         self._label(side,"Candidatos",9)
         self.count = tk.StringVar()
         self._output(side,self.count,10)
-        self._label(side,"Primeira combinação",11)
+        self._label(side,"Cobertura (chance real)",11)
+        self.coverage = tk.StringVar()
+        self._output(side,self.coverage,12)
+        self._label(side,"Varredura (~2 M/s)",13)
+        self.sweep = tk.StringVar()
+        self._output(side,self.sweep,14)
+        tk.Label(side,text="Cobertura = fração do intervalo que o volante varre, ou seja a "
+                 "chance real de a chave cair nele. A chave é sorteio uniforme: nenhum byte é "
+                 "mais provável que outro.",bg=WHITE,fg=SUBTLE,anchor="w",justify="left",
+                 wraplength=215,font=(self.sans,-11)).grid(row=15,column=0,sticky="ew",pady=(2,4))
+        self._label(side,"Primeira combinação",16)
         self.minimum = tk.StringVar()
-        self._output(side,self.minimum,12)
-        self._label(side,"Última combinação",13)
+        self._output(side,self.minimum,17)
+        self._label(side,"Última combinação",18)
         self.maximum = tk.StringVar()
-        self._output(side,self.maximum,14)
-        self._label(side,"Bytes selecionados",15)
+        self._output(side,self.maximum,19)
+        self._label(side,"Bytes selecionados",20)
         self.sizes = tk.StringVar()
-        self._output(side,self.sizes,16)
+        self._output(side,self.sizes,21)
 
     def _output(self, parent, variable, row):
         tk.Label(parent,textvariable=variable,bg=WHITE,fg=INK,anchor="w",justify="left",
@@ -350,6 +376,9 @@ class Panel:
         length = (int(self.puzzle.get())+7)//8
         total = len(self.first)*len(self.shared)**(length-1) if self.first and self.shared else 0
         self.count.set(f"{total:,}".replace(",","."))
+        interval = 1 << (self.displayed_puzzle - 1)   # largura de [2^(N-1), 2^N)
+        self.coverage.set(format_coverage(total / interval) if total else "—")
+        self.sweep.set(format_duration(total / REFERENCE_RATE) if total else "—")
         for op,var in [(min,self.minimum),(max,self.maximum)]:
             var.set(" ".join([f"{op(self.first):02X}"]+[f"{op(self.shared):02X}"]*(length-1))
                     if total else "—")
