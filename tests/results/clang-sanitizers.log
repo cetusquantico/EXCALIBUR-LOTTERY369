@@ -1,0 +1,111 @@
+Start testing: Nov 21 06:34 -03
+----------------------------------------------------------
+1/7 Testing: math
+1/7 Test: math
+Command: "/root/EXCALIBUR-LOTTERY369/build-san/test_math"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"math" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+160 puzzle ranges, 256 list sizes, arithmetic, draws, Cartesian coverage OK
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"math" end time: Nov 21 06:34 -03
+"math" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/7 Testing: crypto
+2/7 Test: crypto
+Command: "/root/EXCALIBUR-LOTTERY369/build-san/test_crypto"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"crypto" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+public vectors, P2PKH validation, forward/reverse EC and HASH160 differential OK
+<end of output>
+Test time =   0.80 sec
+----------------------------------------------------------
+Test Passed.
+"crypto" end time: Nov 21 06:34 -03
+"crypto" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/7 Testing: scheduler
+3/7 Test: scheduler
+Command: "/root/EXCALIBUR-LOTTERY369/build-san/test_scheduler"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"scheduler" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+scheduler and checkpoint tests passed
+<end of output>
+Test time =   0.03 sec
+----------------------------------------------------------
+Test Passed.
+"scheduler" end time: Nov 21 06:34 -03
+"scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/7 Testing: cli
+4/7 Test: cli
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build-san/exlottery" "cli"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"cli" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.74 sec
+----------------------------------------------------------
+Test Passed.
+"cli" end time: Nov 21 06:34 -03
+"cli" time elapsed: 00:00:01
+----------------------------------------------------------
+
+5/7 Testing: dry_run_all
+5/7 Test: dry_run_all
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build-san/exlottery" "dry_run_all"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"dry_run_all" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.08 sec
+----------------------------------------------------------
+Test Passed.
+"dry_run_all" end time: Nov 21 06:34 -03
+"dry_run_all" time elapsed: 00:00:03
+----------------------------------------------------------
+
+6/7 Testing: fixture160
+6/7 Test: fixture160
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build-san/exlottery" "fixture160"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"fixture160" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   1.55 sec
+----------------------------------------------------------
+Test Passed.
+"fixture160" end time: Nov 21 06:34 -03
+"fixture160" time elapsed: 00:00:01
+----------------------------------------------------------
+
+7/7 Testing: restart
+7/7 Test: restart
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build-san/exlottery" "restart"
+Directory: /root/EXCALIBUR-LOTTERY369/build-san
+"restart" start time: Nov 21 06:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   3.80 sec
+----------------------------------------------------------
+Test Passed.
+"restart" end time: Nov 21 06:34 -03
+"restart" time elapsed: 00:00:03
+----------------------------------------------------------
+
+End testing: Nov 21 06:34 -03

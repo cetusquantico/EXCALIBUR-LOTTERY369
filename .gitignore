@@ -1,0 +1,16 @@
+/build*/
+__pycache__/
+/checkpoints/
+/dist/
+/p[0-9]*.json
+/volante.json
+*.json.lock
+*.json.tmp.*
+
+# Material de chave / estado de busca — NUNCA versionar (contêm escalar/WIF em claro)
+/achado*.txt
+/found.txt
+/teste*.json
+/q*.json
+*.wif
+*.key

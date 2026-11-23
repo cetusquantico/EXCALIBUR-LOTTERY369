@@ -1,0 +1,25 @@
+Test project /root/EXCALIBUR-LOTTERY369/build
+      Start  1: panel
+ 1/10 Test  #1: panel ............................   Passed    2.22 sec
+      Start  2: math
+ 2/10 Test  #2: math .............................   Passed    0.01 sec
+      Start  3: crypto
+ 3/10 Test  #3: crypto ...........................   Passed    0.35 sec
+      Start  4: scheduler
+ 4/10 Test  #4: scheduler ........................   Passed    0.01 sec
+      Start  5: public_catalog
+ 5/10 Test  #5: public_catalog ...................   Passed    1.52 sec
+      Start  6: cli
+ 6/10 Test  #6: cli ..............................   Passed    0.84 sec
+      Start  7: dry_run_all
+ 7/10 Test  #7: dry_run_all ......................   Passed    0.79 sec
+      Start  8: fixture160
+ 8/10 Test  #8: fixture160 .......................   Passed    0.48 sec
+      Start  9: restart
+ 9/10 Test  #9: restart ..........................   Passed    2.45 sec
+      Start 10: stop_on_hit
+10/10 Test #10: stop_on_hit ......................   Passed    0.29 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   8.96 sec

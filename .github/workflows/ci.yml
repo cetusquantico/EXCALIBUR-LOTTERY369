@@ -1,0 +1,81 @@
+name: C++17 build and tests
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    container:
+      image: docker.io/library/ubuntu@sha256:9a04f13b3f80ef056361e30868593b1cfd2279fe19e4081cb93a90bf56819d6a
+      volumes:
+        - /etc/ssl/certs/ca-certificates.crt:/tmp/ci-host-ca.pem:ro
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cxx: g++
+            field: 5x52
+            build: Release
+            sanitize: 'OFF'
+            sse: 'ON'
+          - cxx: clang++
+            field: 4x64
+            build: Release
+            sanitize: 'OFF'
+            sse: 'ON'
+          - cxx: g++
+            field: 4x64
+            build: RelWithDebInfo
+            sanitize: 'ON'
+            sse: 'OFF'
+          - cxx: clang++
+            field: 5x52
+            build: RelWithDebInfo
+            sanitize: 'ON'
+            sse: 'ON'
+    name: ${{ matrix.cxx }} / ${{ matrix.field }} / ${{ matrix.build }}
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - name: Install dependencies from the signed Ubuntu snapshot
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          cat >/tmp/exlottery.sources <<'EOF'
+          Types: deb
+          URIs: https://snapshot.ubuntu.com/ubuntu/20261116T000000Z/
+          Suites: noble noble-updates noble-security
+          Components: main universe
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          Check-Valid-Until: no
+          EOF
+          cat >/etc/apt/apt.conf.d/99exlottery-snapshot <<'EOF'
+          Dir::Etc::sourcelist "/tmp/exlottery.sources";
+          Dir::Etc::sourceparts "-";
+          Acquire::https::CaInfo "/tmp/ci-host-ca.pem";
+          EOF
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git make cmake clang g++ python3 python3-tk xvfb xauth pkg-config libboost-dev libssl-dev libsecp256k1-dev
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify vendored core
+        working-directory: vendor/ex369
+        run: sha256sum --check SHA256SUMS
+      - name: Configure
+        run: >-
+          cmake -S . -B build
+          -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+          -DEXLOTTERY_FIELD=${{ matrix.field }}
+          -DEXLOTTERY_SANITIZE=${{ matrix.sanitize }}
+          -DEXLOTTERY_SSE=${{ matrix.sse }}
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

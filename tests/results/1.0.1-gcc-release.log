@@ -1,0 +1,126 @@
+Start testing: Nov 21 11:34 -03
+----------------------------------------------------------
+1/8 Testing: panel
+1/8 Test: panel
+Command: "/usr/bin/xvfb-run" "-a" "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/panel.py" "/root/EXCALIBUR-LOTTERY369/build/exlottery"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"panel" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.27 sec
+----------------------------------------------------------
+Test Passed.
+"panel" end time: Nov 21 11:34 -03
+"panel" time elapsed: 00:00:02
+----------------------------------------------------------
+
+2/8 Testing: math
+2/8 Test: math
+Command: "/root/EXCALIBUR-LOTTERY369/build/test_math"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"math" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+160 puzzle ranges, 256 list sizes, arithmetic, draws, Cartesian coverage OK
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"math" end time: Nov 21 11:34 -03
+"math" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/8 Testing: crypto
+3/8 Test: crypto
+Command: "/root/EXCALIBUR-LOTTERY369/build/test_crypto"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"crypto" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+public vectors, P2PKH validation, forward/reverse EC and HASH160 differential OK
+<end of output>
+Test time =   0.35 sec
+----------------------------------------------------------
+Test Passed.
+"crypto" end time: Nov 21 11:34 -03
+"crypto" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/8 Testing: scheduler
+4/8 Test: scheduler
+Command: "/root/EXCALIBUR-LOTTERY369/build/test_scheduler"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"scheduler" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+scheduler and checkpoint tests passed
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"scheduler" end time: Nov 21 11:34 -03
+"scheduler" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/8 Testing: cli
+5/8 Test: cli
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build/exlottery" "cli"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"cli" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.71 sec
+----------------------------------------------------------
+Test Passed.
+"cli" end time: Nov 21 11:34 -03
+"cli" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/8 Testing: dry_run_all
+6/8 Test: dry_run_all
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build/exlottery" "dry_run_all"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"dry_run_all" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.81 sec
+----------------------------------------------------------
+Test Passed.
+"dry_run_all" end time: Nov 21 11:34 -03
+"dry_run_all" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/8 Testing: fixture160
+7/8 Test: fixture160
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build/exlottery" "fixture160"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"fixture160" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   0.40 sec
+----------------------------------------------------------
+Test Passed.
+"fixture160" end time: Nov 21 11:34 -03
+"fixture160" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/8 Testing: restart
+8/8 Test: restart
+Command: "/usr/bin/python3" "/root/EXCALIBUR-LOTTERY369/tests/cli.py" "/root/EXCALIBUR-LOTTERY369/build/exlottery" "restart"
+Directory: /root/EXCALIBUR-LOTTERY369/build
+"restart" start time: Nov 21 11:34 -03
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.46 sec
+----------------------------------------------------------
+Test Passed.
+"restart" end time: Nov 21 11:34 -03
+"restart" time elapsed: 00:00:02
+----------------------------------------------------------
+
+End testing: Nov 21 11:34 -03

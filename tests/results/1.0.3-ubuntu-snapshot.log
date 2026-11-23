@@ -1,0 +1,78 @@
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13") found components: Crypto 
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE  
+-- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.1") 
+-- Checking for module 'libsecp256k1'
+--   Found libsecp256k1, version 0.2.0
+-- Performing Test EXLOTTERY_HAS_SSSE3_FLAG
+-- Performing Test EXLOTTERY_HAS_SSSE3_FLAG - Success
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Configuring done (0.8s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/build
+[  3%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/hash/sha256.cpp.o
+[  7%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/ec/group.cpp.o
+[ 11%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/hash/ripemd160.cpp.o
+[ 14%] Building CXX object CMakeFiles/exlottery_crypto.dir/src/crypto.cpp.o
+[ 18%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/hash/hash_multi.cpp.o
+[ 22%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/cpu/cpu.cpp.o
+[ 25%] Building CXX object CMakeFiles/exlottery_crypto.dir/vendor/ex369/hash/simd/backend_sse.cpp.o
+[ 29%] Linking CXX static library libexlottery_crypto.a
+[ 29%] Built target exlottery_crypto
+[ 44%] Building CXX object CMakeFiles/exlottery_core.dir/src/uint256.cpp.o
+[ 44%] Building CXX object CMakeFiles/exlottery_core.dir/src/puzzle_range.cpp.o
+[ 44%] Building CXX object CMakeFiles/exlottery_core.dir/src/mixed_radix.cpp.o
+[ 44%] Building CXX object CMakeFiles/exlottery_core.dir/src/allowlist.cpp.o
+[ 48%] Building CXX object CMakeFiles/exlottery_core.dir/src/scheduler.cpp.o
+[ 51%] Building CXX object CMakeFiles/exlottery_core.dir/src/checkpoint.cpp.o
+[ 55%] Building CXX object CMakeFiles/exlottery_core.dir/src/engine.cpp.o
+[ 59%] Building CXX object CMakeFiles/exlottery_core.dir/src/catalog.cpp.o
+[ 66%] Building CXX object CMakeFiles/exlottery_core.dir/src/presentation.cpp.o
+[ 66%] Building CXX object CMakeFiles/exlottery_core.dir/src/public_puzzles.cpp.o
+[ 70%] Linking CXX static library libexlottery_core.a
+[ 70%] Built target exlottery_core
+[ 85%] Building CXX object CMakeFiles/test_scheduler.dir/tests/scheduler.cpp.o
+[ 85%] Building CXX object CMakeFiles/test_math.dir/tests/math.cpp.o
+[ 85%] Building CXX object CMakeFiles/test_crypto.dir/tests/crypto.cpp.o
+[ 85%] Building CXX object CMakeFiles/exlottery.dir/src/main.cpp.o
+[ 88%] Linking CXX executable test_crypto
+[ 88%] Built target test_crypto
+[ 92%] Linking CXX executable test_scheduler
+[ 92%] Built target test_scheduler
+[ 96%] Linking CXX executable test_math
+[ 96%] Built target test_math
+[100%] Linking CXX executable exlottery
+[100%] Built target exlottery
+Internal ctest changing into directory: /tmp/build
+Test project /tmp/build
+      Start  1: panel
+ 1/10 Test  #1: panel ............................   Passed    0.51 sec
+      Start  2: math
+ 2/10 Test  #2: math .............................   Passed    0.01 sec
+      Start  3: crypto
+ 3/10 Test  #3: crypto ...........................   Passed    0.36 sec
+      Start  4: scheduler
+ 4/10 Test  #4: scheduler ........................   Passed    0.01 sec
+      Start  5: public_catalog
+ 5/10 Test  #5: public_catalog ...................   Passed    1.15 sec
+      Start  6: cli
+ 6/10 Test  #6: cli ..............................   Passed    0.73 sec
+      Start  7: dry_run_all
+ 7/10 Test  #7: dry_run_all ......................   Passed    0.60 sec
+      Start  8: fixture160
+ 8/10 Test  #8: fixture160 .......................   Passed    0.35 sec
+      Start  9: restart
+ 9/10 Test  #9: restart ..........................   Passed    2.41 sec
+      Start 10: stop_on_hit
+10/10 Test #10: stop_on_hit ......................   Passed    0.27 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   6.41 sec
