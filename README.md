@@ -60,3 +60,18 @@ Para scripts, acrescente `--output kv`. Nesse formato, `total`, `completed` e `s
 | Código | [CLI](src/main.cpp), [motor](src/engine.cpp), [interfaces](include/exlottery), [núcleo copiado e licença](vendor/ex369) |
 
 A build usa a cópia em `vendor/ex369`. Todos os arquivos necessários para recompilar acompanham este projeto, exceto as dependências de sistema listadas acima.
+
+## Créditos
+
+O núcleo criptográfico (copiado do excalibur369, em `vendor/ex369`) deriva do
+[keyhunt](https://github.com/albertobsd/keyhunt), de Luis Alberto (albertobsd), sob a
+licença MIT — Copyright (c) 2020 Luis Alberto. O libsecp256k1 em `vendor/` é MIT (Bitcoin
+Core), com a licença incluída.
+
+## Apoie
+
+Trabalho de tempo livre, bancado por mim. O próximo passo grande — uma versão GPU — precisa
+de hardware. Se isto te for útil e quiser ajudar, doações em Bitcoin são bem-vindas, sem
+promessa de retorno:
+
+`bc1qhsq406jt6ghkzmhpnqe4r2s639t6mtrhj6zx03`
