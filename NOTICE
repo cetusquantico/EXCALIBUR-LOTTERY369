@@ -1,0 +1,10 @@
+EXCALIBUR LOTTERY369 — third-party notices
+
+This project is MIT-licensed (see LICENSE).
+
+Portions derive from keyhunt (https://github.com/albertobsd/keyhunt),
+Copyright (c) 2020 Luis Alberto (albertobsd), used under the MIT License.
+
+The vendored secp256k1 code under vendor/ is MIT-licensed:
+  - vendor/ex369/LICENSE                (crypto core copied from excalibur369)
+  - vendor/LICENSE-libsecp256k1.txt     (Bitcoin Core libsecp256k1)
