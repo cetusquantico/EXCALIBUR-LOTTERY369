@@ -5,11 +5,15 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import queue
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unicodedata
 
 try:
@@ -92,6 +96,249 @@ def record(puzzle, first, shared):
 def ticket_args(ticket):
     return ["--puzzle", str(ticket["puzzle"]), "--first-allow", ticket["first_allow"],
             "--allow", ticket["shared_allow"]]
+
+
+def wheel_size(ticket):
+    """(candidatos, largura do intervalo 2^(N-1)) do volante."""
+    puzzle = ticket["puzzle"]
+    length = (puzzle + 7) // 8
+    low, high = first_bounds(puzzle)
+    first = len(parse_list(ticket["first_allow"], low, high))
+    shared = len(parse_list(ticket["shared_allow"]))
+    return first * shared ** (length - 1), 1 << (puzzle - 1)
+
+
+def build_search_cmd(binary, ticket, address, threads, stop_on_hit, found_path):
+    """Comando do motor para varrer o volante procurando `address` (saída kv, status a cada 1s)."""
+    cmd = [str(binary), *ticket_args(ticket), "--search", "--address", address,
+           "--output", "kv", "--status", "1", "--threads", str(int(threads)),
+           "--found", str(found_path)]
+    if stop_on_hit:
+        cmd.append("--stop-on-hit")
+    return cmd
+
+
+_PROGRESS = re.compile(r"completed=(\d+)/(\d+)")
+
+
+class SearchRun:
+    """Dirige a busca do motor em background; a GUI (ou um teste) consome via drain()."""
+
+    def __init__(self, cmd):
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     text=True, bufsize=1)
+        self.queue = queue.Queue()
+        self.result = {}           # kv do stdout — a verdade final
+        self.messages = []         # linhas de erro do stderr
+        self.completed = self.total = 0
+        self.returncode = None
+        self.done = False
+        for stream, tag in ((self.proc.stdout, "out"), (self.proc.stderr, "err")):
+            threading.Thread(target=self._pump, args=(stream, tag), daemon=True).start()
+        threading.Thread(target=self._wait, daemon=True).start()
+
+    def _pump(self, stream, tag):
+        for line in stream:
+            self.queue.put((tag, line.rstrip("\n")))
+        stream.close()
+
+    def _wait(self):
+        self.queue.put(("done", self.proc.wait()))
+
+    def drain(self):
+        """Consome as linhas enfileiradas. Retorna True se algo mudou. Só toca estado, nunca a GUI."""
+        changed = False
+        while True:
+            try:
+                tag, value = self.queue.get_nowait()
+            except queue.Empty:
+                break
+            changed = True
+            if tag == "err":
+                hit = _PROGRESS.fullmatch(value)
+                if hit:
+                    self.completed, self.total = int(hit.group(1)), int(hit.group(2))
+                elif value.strip():
+                    self.messages.append(value.strip())
+            elif tag == "out" and "=" in value:
+                key, val = value.split("=", 1)
+                self.result[key] = val
+            elif tag == "done":
+                self.returncode = value
+                self.done = True
+        return changed
+
+    def stop(self):
+        """Interrupção graciosa (o motor trata SIGINT e ainda imprime o resultado)."""
+        if self.proc.poll() is None:
+            try:
+                self.proc.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                pass
+
+    def kill(self):
+        if self.proc.poll() is None:
+            try:
+                self.proc.kill()
+            except ProcessLookupError:
+                pass
+
+
+class RunDialog:
+    """Janela de execução ao vivo: dispara a busca e mostra progresso, taxa e resultado."""
+
+    def __init__(self, parent, binary, ticket):
+        self.binary, self.ticket = Path(binary), ticket
+        self.run = self.tmp = self.after_id = None
+        self.t0 = 0.0
+        total, interval = wheel_size(ticket)
+
+        self.top = top = tk.Toplevel(parent)
+        top.title(f"Buscar · Puzzle {ticket['puzzle']}")
+        top.configure(bg=WHITE, padx=16, pady=14)
+        top.transient(parent)
+        top.resizable(False, False)
+        top.columnconfigure(1, weight=1)
+
+        head = (f"Candidatos {total:,}".replace(",", ".")
+                + f"   ·   Cobertura (chance) {format_coverage(total / interval)}"
+                + f"   ·   Varredura ~{format_duration(total / REFERENCE_RATE)}")
+        tk.Label(top, text=head, bg=WHITE, fg=SUBTLE, anchor="w",
+                 font=("TkDefaultFont", -12)).grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 10))
+
+        tk.Label(top, text="Endereço do puzzle", bg=WHITE, fg=INK, anchor="w").grid(row=1, column=0, sticky="w")
+        self.address = tk.StringVar()
+        self.addr_entry = ttk.Entry(top, textvariable=self.address, width=42, font=("TkFixedFont", -12))
+        self.addr_entry.grid(row=1, column=1, columnspan=2, sticky="ew", pady=3)
+
+        tk.Label(top, text="Threads", bg=WHITE, fg=INK, anchor="w").grid(row=2, column=0, sticky="w")
+        self.threads = tk.IntVar(value=2)
+        ttk.Spinbox(top, from_=1, to=8, width=5, textvariable=self.threads).grid(row=2, column=1, sticky="w", pady=3)
+        self.stop_hit = tk.BooleanVar(value=True)
+        ttk.Checkbutton(top, text="Parar no 1º acerto", variable=self.stop_hit).grid(row=2, column=2, sticky="e")
+
+        self.bar = ttk.Progressbar(top, mode="determinate")
+        self.bar.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(12, 4))
+        self.progress, self.rate = tk.StringVar(value="—"), tk.StringVar(value="—")
+        self.elapsed, self.state = tk.StringVar(value="—"), tk.StringVar(value="pronto")
+        meters = tk.Frame(top, bg=WHITE)
+        meters.grid(row=4, column=0, columnspan=3, sticky="ew")
+        for i, (name, var) in enumerate((("Varridos", self.progress), ("Taxa", self.rate),
+                                         ("Tempo", self.elapsed), ("Estado", self.state))):
+            tk.Label(meters, text=name, bg=WHITE, fg=SUBTLE, font=("TkDefaultFont", -11)).grid(row=0, column=i, sticky="w", padx=(0, 16))
+            tk.Label(meters, textvariable=var, bg=WHITE, fg=INK, font=("TkFixedFont", -12), anchor="w").grid(row=1, column=i, sticky="w", padx=(0, 16))
+
+        self.textbox = tk.Text(top, height=4, width=62, bg="#f3f6f2", fg=INK, relief="flat",
+                               font=("TkFixedFont", -12), wrap="word", state="disabled")
+        self.textbox.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(10, 6))
+
+        actions = tk.Frame(top, bg=WHITE)
+        actions.grid(row=6, column=0, columnspan=3, sticky="e")
+        self.start_btn = ttk.Button(actions, text="Iniciar", style="Accent.TButton", command=self.start)
+        self.start_btn.pack(side="left", padx=4)
+        self.stop_btn = ttk.Button(actions, text="Parar", command=self.cancel, state="disabled")
+        self.stop_btn.pack(side="left", padx=4)
+        ttk.Button(actions, text="Fechar", command=self.close).pack(side="left", padx=4)
+        top.protocol("WM_DELETE_WINDOW", self.close)
+        self.addr_entry.focus_set()
+
+    def _write(self, text):
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0", "end")
+        self.textbox.insert("1.0", text)
+        self.textbox.configure(state="disabled")
+
+    def _running(self, flag):
+        self.start_btn.configure(state="disabled" if flag else "normal")
+        self.stop_btn.configure(state="normal" if flag else "disabled")
+        self.addr_entry.configure(state="disabled" if flag else "normal")
+
+    def start(self):
+        address = self.address.get().strip()
+        if not address:
+            messagebox.showerror("Buscar", "Informe o endereço público do puzzle.", parent=self.top)
+            return
+        handle = tempfile.NamedTemporaryFile("w", prefix="exlottery-hit-", suffix=".txt", delete=False)
+        handle.close()
+        self.tmp = Path(handle.name)
+        cmd = build_search_cmd(self.binary, self.ticket, address, self.threads.get(),
+                               self.stop_hit.get(), self.tmp)
+        try:
+            self.run = SearchRun(cmd)
+        except OSError as exc:
+            messagebox.showerror("Buscar", f"Não foi possível iniciar o motor:\n{exc}", parent=self.top)
+            return
+        self.t0 = time.monotonic()
+        self.state.set("buscando…")
+        self._write("")
+        self._running(True)
+        self._tick()
+
+    def _tick(self):
+        if self.run is None:
+            return
+        self.run.drain()
+        if self.run.total:
+            self.bar.configure(maximum=self.run.total, value=self.run.completed)
+            pct = 100 * self.run.completed / self.run.total
+            self.progress.set(f"{self.run.completed:,}/{self.run.total:,} ({pct:.1f}%)".replace(",", "."))
+        secs = time.monotonic() - self.t0
+        self.elapsed.set(format_duration(secs))
+        if secs > 0 and self.run.completed:
+            self.rate.set(f"{self.run.completed / secs / 1e6:.2f} M/s")
+        if self.run.done:
+            self._finish()
+            return
+        self.after_id = self.top.after(150, self._tick)
+
+    def _finish(self):
+        self.run.drain()
+        self.after_id = None
+        result, rc = self.run.result, self.run.returncode
+        total = int(result.get("total", "0") or 0)
+        completed = int(result.get("completed", "0") or 0)
+        matches = int(result.get("matches", "0") or 0)
+        cps = result.get("candidates_per_second")
+        if cps:
+            self.rate.set(f"{float(cps) / 1e6:.2f} M/s")
+        if total:
+            self.bar.configure(maximum=total, value=completed)
+            self.progress.set(f"{completed:,}/{total:,} ({100 * completed / total:.1f}%)".replace(",", "."))
+        if matches > 0:
+            self.state.set("✔ ACHOU — chave confirmada")
+            self._write("private : {}\nWIF     : {}\nendereço: {}".format(
+                result.get("found_private", "?"), result.get("found_wif", "?"),
+                result.get("found_address", "?")))
+        elif rc in (0, None) and total and completed >= total:
+            self.state.set("varredura completa — sem acerto")
+            self._write("A chave não está neste volante. Amplie a seleção de bytes ou escolha "
+                        "outro puzzle — a cobertura mostra a chance real antes de rodar.")
+        elif rc == 130 or any("interromp" in m.lower() for m in self.run.messages):
+            self.state.set("interrompido")
+            self._write(f"Busca parada após {completed:,} candidatos.".replace(",", "."))
+        else:
+            self.state.set("falhou")
+            self._write("\n".join(self.run.messages) or f"O motor saiu com código {rc}.")
+        self._running(False)
+        self.run = None
+
+    def cancel(self):
+        if self.run is not None:
+            self.state.set("parando…")
+            self.run.stop()
+
+    def close(self):
+        if self.after_id is not None:
+            self.top.after_cancel(self.after_id)
+            self.after_id = None
+        if self.run is not None:
+            self.run.stop()
+            self.run.kill()
+            self.run = None
+        if self.tmp is not None:
+            self.tmp.unlink(missing_ok=True)
+            self.tmp = None
+        self.top.destroy()
 
 
 def load_library(path):
@@ -192,8 +439,9 @@ class Panel:
         files.configure(menu=menu)
         files.pack(side="left", padx=3)
         ttk.Button(footer, text="Copiar argumentos", command=self.copy).pack(side="left", padx=6)
-        ttk.Button(footer, text="Validar volante", style="Accent.TButton",
-                   command=self.validate).pack(side="left")
+        ttk.Button(footer, text="Validar volante", command=self.validate).pack(side="left")
+        ttk.Button(footer, text="Buscar…", style="Accent.TButton",
+                   command=self.open_run).pack(side="left", padx=(6, 0))
         self._list()
         if SAMPLE_NAME in self.library:
             initial = self.library[SAMPLE_NAME]
@@ -324,6 +572,16 @@ class Panel:
         ticket = record(int(self.puzzle.get()), self.first, self.shared)
         ticket["link_first"] = self.link_first.get()
         return ticket
+
+    def open_run(self):
+        if not self.sync():
+            return
+        try:
+            ticket = self.current()
+        except ValueError as exc:
+            messagebox.showerror("Buscar", str(exc), parent=self.root)
+            return
+        RunDialog(self.root, self.binary, ticket)
 
     def bounds(self):
         return first_bounds(int(self.puzzle.get())) if self.active=="first_allow" else (0,255)

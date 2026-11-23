@@ -59,6 +59,8 @@ if(BUILD_TESTING)
     endforeach()
     add_test(NAME public_catalog COMMAND ${Python3_EXECUTABLE}
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/public_catalog.py" $<TARGET_FILE:exlottery>)
+    add_test(NAME panel_run COMMAND ${Python3_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/panel_run.py" $<TARGET_FILE:exlottery>)
     foreach(suite cli dry_run_all fixture160 restart stop_on_hit search)
         add_test(NAME ${suite} COMMAND ${Python3_EXECUTABLE}
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli.py" $<TARGET_FILE:exlottery> ${suite})
