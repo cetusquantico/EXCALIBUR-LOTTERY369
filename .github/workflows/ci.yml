@@ -60,7 +60,7 @@ jobs:
           Acquire::https::CaInfo "/tmp/ci-host-ca.pem";
           EOF
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates git make cmake clang g++ python3 python3-tk xvfb xauth pkg-config libboost-dev libssl-dev libsecp256k1-dev
+          apt-get install -y --no-install-recommends ca-certificates git make cmake clang libclang-rt-18-dev g++ python3 python3-tk xvfb xauth pkg-config libboost-dev libssl-dev libsecp256k1-dev
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
