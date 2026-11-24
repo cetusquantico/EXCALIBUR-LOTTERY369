@@ -60,6 +60,7 @@ Para scripts, acrescente `--output kv`. Nesse formato, `total`, `completed` e `s
 | Estrutura das famílias (byte do topo fixo por range) | [Famílias](docs/FAMILIES.md) |
 | Valores das transações (prêmio = N e N×9; por que não prevê a chave) | [Funding](docs/FUNDING.md) |
 | CPUs modernas, distros e AVX2 | [Compatibilidade](docs/COMPATIBILITY.md) |
+| Viabilidade: brute vs volante vs kangaroo (e a régua da pubkey) | [Viabilidade](docs/FEASIBILITY.md) |
 | Código | [CLI](src/main.cpp), [motor](src/engine.cpp), [interfaces](include/exlottery), [núcleo copiado e licença](vendor/ex369) |
 
 A build usa a cópia em `vendor/ex369`. Todos os arquivos necessários para recompilar acompanham este projeto, exceto as dependências de sistema listadas acima.
