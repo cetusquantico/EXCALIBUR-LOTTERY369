@@ -76,6 +76,7 @@ TR_PT2EN = {
     "Lista hexadecimal": "Hex list",
     "Aplicar lista": "Apply list",
     "Frequência histórica": "Historical frequency",
+    "Só desta família": "This family only",
     "Ver chave de:": "View key of:",
     "(sem solved_keys.tsv — overlay histórico indisponível)":
         "(no solved_keys.tsv — history overlay unavailable)",
@@ -284,6 +285,16 @@ def byte_histograms(solved):
             for b in values[1:]:
                 shared[b] += 1
     return first, shared
+
+
+def puzzle_family(puzzle):
+    """Puzzles 1..160 that share this one's fixed top-byte range (same (N-1) % 8).
+    The top byte is structurally constrained to [low, high] for the whole family;
+    members differ by 8. Returns (low, high, members)."""
+    low, high = first_bounds(puzzle)
+    residue = (puzzle - 1) % 8
+    members = [n for n in range(1, 161) if (n - 1) % 8 == residue]
+    return low, high, members
 
 
 def heat_color(t):
@@ -642,6 +653,8 @@ class Panel:
         self.first_hist, self.shared_hist = byte_histograms(self.solved)
         self.solved_by_puzzle = dict(self.solved)
         self.history_on = tk.BooleanVar(value=False)
+        self.family_only = tk.BooleanVar(value=False)
+        self.family_text = tk.StringVar(value="")
         self.reveal = tk.StringVar(value="")
         self.reveal_key = tk.StringVar(value="")
         self.reveal_bytes = set()
@@ -818,6 +831,8 @@ class Panel:
         if self.solved:
             ttk.Checkbutton(history, text="Frequência histórica", variable=self.history_on,
                             command=self.render).pack(side="left")
+            ttk.Checkbutton(history, text="Só desta família", variable=self.family_only,
+                            command=self.render).pack(side="left", padx=(10, 0))
             tk.Label(history, text="Ver chave de:", bg=WHITE, fg=SUBTLE).pack(side="left", padx=(12, 4))
             combo = ttk.Combobox(history, textvariable=self.reveal, width=7, state="readonly",
                                  values=["—"] + [f"#{p}" for p, _ in self.solved])
@@ -831,6 +846,8 @@ class Panel:
         else:
             tk.Label(history, text="(sem solved_keys.tsv — overlay histórico indisponível)",
                      bg=WHITE, fg=SUBTLE, font=(self.sans, -11)).pack(side="left")
+        tk.Label(editor, textvariable=self.family_text, bg=WHITE, fg=SUBTLE, anchor="w",
+                 justify="left", wraplength=700, font=(self.sans, -11)).grid(row=6, column=0, sticky="ew", pady=(4, 0))
 
     def values(self):
         return self.first if self.active=="first_allow" else self.shared
@@ -901,8 +918,20 @@ class Panel:
         automatic = self.active == "first_allow" and self.link_first.get()
         self.input.configure(state="readonly" if automatic else "normal")
         values = self.values()
+        low_f, high_f, members = puzzle_family(self.displayed_puzzle)
+        solved_f = [n for n in members if n in self.solved_by_puzzle]
+        self.family_text.set(L(
+            f"Família — byte do topo sempre em {low_f:02X}–{high_f:02X}  ·  puzzles: "
+            + ", ".join(map(str, members)) + "  ·  resolvidos: " + (", ".join(map(str, solved_f)) or "—"),
+            f"Family — top byte always in {low_f:02X}–{high_f:02X}  ·  puzzles: "
+            + ", ".join(map(str, members)) + "  ·  solved: " + (", ".join(map(str, solved_f)) or "—")))
         heat = self.history_on.get() and bool(self.solved)
-        hist = self.first_hist if self.active == "first_allow" else self.shared_hist
+        if heat and self.family_only.get():
+            fam = [(n, self.solved_by_puzzle[n]) for n in solved_f]
+            first_h, shared_h = byte_histograms(fam)
+        else:
+            first_h, shared_h = self.first_hist, self.shared_hist
+        hist = first_h if self.active == "first_allow" else shared_h
         hmax = max(hist) if heat and any(hist) else 1
         for value,b in enumerate(self.buttons):
             legal = self.low <= value <= self.high and not automatic

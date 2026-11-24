@@ -15,6 +15,7 @@ Publicação open source e reforma do painel.
 - **Busca pela interface** (botão *Buscar…*): dispara o motor e mostra progresso, taxa, tempo e o resultado verificado ao vivo, sem travar; *Parar* usa SIGINT gracioso.
 - **Checkpoint/resume no diálogo de busca**: salva o progresso e retoma de onde parou (à prova de pausa/reboot); a config vem do próprio checkpoint.
 - **Overlay histórico**: mapa de frequência dos bytes nas 83 chaves resolvidas (prova visual de que a distribuição é uniforme, não dica) e opção de revelar a chave de qualquer puzzle resolvido na grade.
+- **Estrutura por família**: linha com a família do puzzle atual — o byte do topo é fixo num range por família (ex.: puzzles 7, 15, 23, … → `40–7F`; membros diferem de +8) — com os membros e os resolvidos, e um "Só desta família" que escopa a frequência histórica à família. Fato estrutural determinístico, não dica.
 - **Usabilidade**: botão *Colar* endereço, botão *Copiar hex* do resultado, e *threads* até 32.
 - **Idioma PT/EN** com troca ao vivo (botão no cabeçalho).
 
